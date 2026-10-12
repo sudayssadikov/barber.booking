@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import Avatar from "../components/Avatar.jsx";
-import { SALON, SERVICES, MASTERS } from "../config/content";
-import { money } from "../lib/availability";
+import { SALON, SERVICES, MASTERS } from "../../shared/config.js";
+import { money } from "../../shared/availability.js";
 import { write } from "../lib/store";
 
 export default function Home() {

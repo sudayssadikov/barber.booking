@@ -1,5 +1,5 @@
-import { STATUS, byService, byMaster } from "../config/content";
-import { fD, fT, money } from "../lib/availability";
+import { STATUS, byService, byMaster } from "../../shared/config.js";
+import { fD, fT, money } from "../../shared/availability.js";
 export default function BookingCard({ b, showClient, children }) {
   // Konfiguratsiyadan oʻchirilgan xizmat/usta eski bronni buzmasin
   const svc = b.svc.map((id) => byService(id)?.name || "Xizmat oʻchirilgan").join(", ");

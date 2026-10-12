@@ -1,13 +1,19 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout.jsx";
 import RequireRole from "./components/RequireRole.jsx";
+import Loading from "./components/Loading.jsx";
 import Home from "./pages/Home.jsx";
 import Auth from "./pages/Auth.jsx";
 import Book from "./pages/Book.jsx";
 import Account from "./pages/Account.jsx";
-import Bookings from "./pages/admin/Bookings.jsx";
-import Users from "./pages/admin/Users.jsx";
-import MasterSchedule from "./pages/MasterSchedule.jsx";
+
+// Xodimlar sahifalari alohida yuklanadi — mijozlar uchun asosiy JS yengilroq
+const Bookings = lazy(() => import("./pages/admin/Bookings.jsx"));
+const Users = lazy(() => import("./pages/admin/Users.jsx"));
+const MasterSchedule = lazy(() => import("./pages/MasterSchedule.jsx"));
+
+const Staff = ({ roles, children }) => <RequireRole roles={roles}><Suspense fallback={<Loading />}>{children}</Suspense></RequireRole>;
 
 export default function App() {
   return (
@@ -19,9 +25,9 @@ export default function App() {
         <Route path="register" element={<Auth mode="register" />} />
         <Route path="setup" element={<Auth mode="setup" />} />
         <Route path="account" element={<RequireRole><Account /></RequireRole>} />
-        <Route path="master" element={<RequireRole roles={["master"]}><MasterSchedule /></RequireRole>} />
-        <Route path="admin" element={<RequireRole roles={["admin"]}><Bookings /></RequireRole>} />
-        <Route path="admin/users" element={<RequireRole roles={["admin"]}><Users /></RequireRole>} />
+        <Route path="master" element={<Staff roles={["master"]}><MasterSchedule /></Staff>} />
+        <Route path="admin" element={<Staff roles={["admin"]}><Bookings /></Staff>} />
+        <Route path="admin/users" element={<Staff roles={["admin"]}><Users /></Staff>} />
         <Route path="*" element={<div className="w"><div className="empty" style={{ margin: "48px 0" }}>Sahifa topilmadi.</div></div>} />
       </Route>
     </Routes>

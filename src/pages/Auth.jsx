@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
-import { homeFor } from "../lib/roles";
-import { phoneDigits } from "../lib/availability";
+import { homeFor } from "../../shared/roles.js";
+import { phoneDigits } from "../../shared/availability.js";
+import { checkName, checkPhone, checkPassword, firstError, PW_MIN } from "../../shared/validation.js";
 
 const TEXT = {
   setup: ["Salon egasi akkaunti", "Tizim birinchi marta ishga tushdi. Bu akkaunt admin boʻladi: bronlar va foydalanuvchilarni shu yerdan boshqarasiz."],
@@ -10,17 +11,20 @@ const TEXT = {
   login: ["Kirish", "Bronlaringizni koʻrish va boshqarish uchun kiring."],
 };
 
+// Faqat ilova ichidagi yoʻlga qaytariladi (tashqi saytga yoʻnaltirishning oldini olish)
+const safeFrom = (p) => (typeof p === "string" && p.startsWith("/") && !p.startsWith("//") ? p : null);
+
 export default function Auth({ mode }) {
-  const { user, needsSetup, login, register } = useAuth();
+  const auth = useAuth();
   const nav = useNavigate();
-  const from = useLocation().state?.from;
+  const from = safeFrom(useLocation().state?.from);
   const [f, setF] = useState({ name: "", ph: "", pw: "" });
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (user) return <Navigate to={from || homeFor(user)} replace />;
-  if (mode === "setup" && !needsSetup) return <Navigate to="/login" replace />;
-  if (mode !== "setup" && needsSetup) return <Navigate to="/setup" replace />;
+  if (auth.user) return <Navigate to={from || homeFor(auth.user)} replace />;
+  if (mode === "setup" && !auth.needsSetup) return <Navigate to="/login" replace />;
+  if (mode !== "setup" && auth.needsSetup) return <Navigate to="/setup" replace />;
 
   const reg = mode !== "login";
   const [title, hint] = TEXT[mode];
@@ -28,30 +32,36 @@ export default function Auth({ mode }) {
 
   async function submit(e) {
     e.preventDefault();
-    setErr("");
-    if (reg && f.name.trim().length < 2) return setErr("Ismingizni kiriting");
-    if (!/^\d{9}$/.test(f.ph)) return setErr("Telefon raqam 9 ta raqamdan iborat boʻlsin (masalan 901234567)");
-    if (f.pw.length < 6) return setErr("Parol kamida 6 ta belgi boʻlsin");
-    setBusy(true);
     const phone = `+998${f.ph}`;
-    const r = reg ? await register({ name: f.name, phone, pw: f.pw }) : await login(phone, f.pw);
-    setBusy(false);
-    if (!r.ok) return setErr(r.error);
-    nav(from || homeFor(r.user), { replace: true });
+    const invalid = firstError(reg && checkName(f.name), checkPhone(phone), reg ? checkPassword(f.pw) : !f.pw && "Parolni kiriting");
+    setErr(invalid || "");
+    if (invalid) return;
+    setBusy(true);
+    try {
+      const data = { name: f.name.trim(), phone, pw: f.pw };
+      const user = await auth[mode](data);
+      nav(from || homeFor(user), { replace: true });
+    } catch (e) {
+      setErr(e.message);
+      setBusy(false);
+    }
   }
 
   return (
     <div className="w fade" style={{ maxWidth: 460, padding: "48px 20px" }}>
       <h2>{title}</h2>
       <p className="mute" style={{ margin: "8px 0 22px" }}>{hint}</p>
-      <form onSubmit={submit} className="stack card">
-        {reg && <label>Ism<input value={f.name} onChange={set("name")} autoComplete="name" /></label>}
+      <form onSubmit={submit} className="stack card" noValidate>
+        {reg && <label>Ism<input value={f.name} onChange={set("name")} autoComplete="name" maxLength={60} /></label>}
         <label>Telefon
           <div className="ph"><span>+998</span><input inputMode="numeric" value={f.ph} onChange={set("ph")} placeholder="901234567" autoComplete="tel-national" /></div>
         </label>
-        <label>Parol<input type="password" value={f.pw} onChange={set("pw")} autoComplete={reg ? "new-password" : "current-password"} /></label>
+        <label>Parol
+          <input type="password" value={f.pw} onChange={set("pw")} autoComplete={reg ? "new-password" : "current-password"} maxLength={128} />
+          {reg && <small className="mute">Kamida {PW_MIN} ta belgi, harf va raqam bilan</small>}
+        </label>
         {err && <div className="err" role="alert">{err}</div>}
-        <button className="btn" disabled={busy}>{title}</button>
+        <button className="btn" disabled={busy}>{busy ? "Kuting…" : title}</button>
         {mode !== "setup" && (
           <button type="button" className="btn ghost" onClick={() => nav(reg ? "/login" : "/register", { state: { from } })}>
             {reg ? "Akkauntim bor: kirish" : "Akkaunt yaratish"}

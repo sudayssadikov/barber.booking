@@ -1,4 +1,4 @@
-// Salon egasi faqat shu faylni oʻzgartiradi.
+// Salon egasi faqat shu faylni oʻzgartiradi. Client ham, server ham shu fayldan oʻqiydi.
 export const SALON = {
   name: "Usta Barber",
   addr: "Toshkent sh., Chilonzor, 9-kvartal",
